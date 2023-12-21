@@ -1,4 +1,4 @@
-module github.com/leep-frog/computer-setup
+module github.com/leep-frog/qmkwrapper
 
 go 1.20
 
