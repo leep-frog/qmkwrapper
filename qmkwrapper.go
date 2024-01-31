@@ -12,6 +12,11 @@ import (
 	"github.com/leep-frog/command/sourcerer"
 )
 
+const (
+	// TODO: Use this to replace old qmk CLI.
+	QMKEnvArg = "LEEP_QMK"
+)
+
 var (
 	shortcutName = "compile-shortcut"
 	codeFile     = filepath.Join("users", "leep-frog", "v2", "leep_codes_v2.h")
@@ -19,6 +24,14 @@ var (
 	// methods that are stubbed in tests
 	osReadFile  = os.ReadFile
 	osWriteFile = os.WriteFile
+
+	// TODO: Actualy use these binding things to replace the old qmk CLI.
+	basicKeyboardBindings = []string{
+		`bind '"\C-h":backward-delete-char'`,
+	}
+	qmkKeyboardBindings = []string{
+		`bind '"\C-h":backward-kill-word'`,
+	}
 )
 
 func CLI(code1, code2 string) sourcerer.CLI {
@@ -120,6 +133,9 @@ func (qw *qmkWrapper) ShortcutMap() map[string]map[string][]string {
 func (qw *qmkWrapper) Node() command.Node {
 	return &commander.BranchNode{
 		Branches: map[string]command.Node{
+			"test": commander.SerialNodes(
+				commander.SimpleExecutableProcessor("make test:leep_frog"),
+			),
 			"config": &commander.BranchNode{
 				Branches: map[string]command.Node{
 					"list": commander.SerialNodes(
