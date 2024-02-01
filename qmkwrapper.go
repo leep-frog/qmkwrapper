@@ -41,9 +41,10 @@ func CLI(code1, code2 string) sourcerer.CLI {
 	}
 }
 
-func codeFileContents(code1, code2 string) []byte {
+func codeFileContents(version, code1, code2 string) []byte {
 	return []byte(strings.Join([]string{
 		"#pragma once",
+		fmt.Sprintf("#define LEEP_VERSION %q", version),
 		fmt.Sprintf("#define LEEP_CODE_1 %q", code1),
 		fmt.Sprintf("#define LEEP_CODE_2 %q", code2),
 		"",
@@ -131,6 +132,18 @@ func (qw *qmkWrapper) ShortcutMap() map[string]map[string][]string {
 }
 
 func (qw *qmkWrapper) Node() command.Node {
+	verifyConfig := commander.SuperSimpleProcessor(func(i *command.Input, d *command.Data) error {
+		if qw.QMKDir == "" || qw.OutputDir == "" {
+			return fmt.Errorf("Directory values have not been set (`q config set`)")
+		}
+		return nil
+	})
+	versionCommand := &commander.ShellCommand[string]{
+		ArgName:     "VERSION",
+		CommandName: "git",
+		Args:        []string{"rev-parse", "HEAD"},
+		Dir:         qw.QMKDir,
+	}
 	return &commander.BranchNode{
 		Branches: map[string]command.Node{
 			"test": commander.SerialNodes(
@@ -159,6 +172,7 @@ func (qw *qmkWrapper) Node() command.Node {
 			},
 		},
 		Default: commander.ShortcutNode(shortcutName, qw, commander.SerialNodes(
+			verifyConfig,
 			commander.FlagProcessor(
 				hexFileFlag,
 				hashFlag,
@@ -166,34 +180,37 @@ func (qw *qmkWrapper) Node() command.Node {
 			),
 			keyboardArg,
 			keymapArg,
+			versionCommand,
 			&commander.ExecutorProcessor{func(o command.Output, d *command.Data) error {
-				// commander.ExecutableProcessor(func(o command.Output, d *command.Data) ([]string, error) {
-				if qw.QMKDir == "" || qw.OutputDir == "" {
-					return o.Stderrln("Directory values have not been set (`q config set`)")
-				}
 
 				kb := keyboardArg.Get(d)
 				km := keymapArg.Get(d)
 
+				version := versionCommand.Get(d)
+				if len(version) > 6 {
+					version = version[:6]
+				}
+
+				var code1, code2 string
 				if codesFlag.Provided(d) {
 					codes := codesFlag.Get(d)
-					code1, code2 := codes[0], codes[1]
-
-					if hashFlag.Get(d) {
-						code1 = rot(qw.hash, code1, true)
-						code2 = rot(qw.hash2, code2, true)
-					}
-
-					if err := osWriteFile(filepath.Join(qw.QMKDir, codeFile), []byte(codeFileContents(code1, code2)), 0644); err != nil {
-						return o.Annotate(err, "failed to write code file")
-					}
-
-					defer func() {
-						if err := osWriteFile(filepath.Join(qw.QMKDir, codeFile), []byte(codeFileContents("", "")), 0644); err != nil {
-							o.Annotatef(err, "CRITICAL: failed to remove temporary codes")
-						}
-					}()
+					code1, code2 = codes[0], codes[1]
 				}
+
+				if hashFlag.Get(d) {
+					code1 = rot(qw.hash, code1, true)
+					code2 = rot(qw.hash2, code2, true)
+				}
+
+				if err := osWriteFile(filepath.Join(qw.QMKDir, codeFile), []byte(codeFileContents(version, code1, code2)), 0644); err != nil {
+					return o.Annotate(err, "failed to write code file")
+				}
+
+				defer func() {
+					if err := osWriteFile(filepath.Join(qw.QMKDir, codeFile), []byte(codeFileContents("auto-generated", "", "")), 0644); err != nil {
+						o.Annotatef(err, "CRITICAL: failed to remove temporary codes")
+					}
+				}()
 
 				// Run the qmk command
 				bc := &commander.ShellCommand[string]{

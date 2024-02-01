@@ -64,12 +64,6 @@ func TestMain(t *testing.T) {
 					"message 1",
 					"message two",
 				},
-				WantData: &command.Data{Values: map[string]interface{}{
-					keyboardArg.Name(): "kb",
-					keymapArg.Name():   "km",
-					codesFlag.Name():   []string{"message 1", "message two"},
-					hexFileFlag.Name(): "bin",
-				}},
 				WantStderr: "Directory values have not been set (`q config set`)\n",
 				WantErr:    fmt.Errorf("Directory values have not been set (`q config set`)"),
 			},
@@ -87,14 +81,37 @@ func TestMain(t *testing.T) {
 					"message 1",
 					"message two",
 				},
+				WantStderr: "Directory values have not been set (`q config set`)\n",
+				WantErr:    fmt.Errorf("Directory values have not been set (`q config set`)"),
+			},
+		},
+		{
+			name: "fails if can't get version",
+			q:    qw(),
+			etc: &commandtest.ExecuteTestCase{
+				Args: []string{
+					"kb",
+					"km",
+					"--codes",
+					"message 1",
+					"message two",
+				},
+				WantRunContents: []*commandtest.RunContents{{
+					Name: "git",
+					Args: []string{"rev-parse", "HEAD"},
+					Dir:  qw().QMKDir,
+				}},
+				RunResponses: []*commandtest.FakeRun{{
+					Err: fmt.Errorf("version oops"),
+				}},
 				WantData: &command.Data{Values: map[string]interface{}{
 					keyboardArg.Name(): "kb",
 					keymapArg.Name():   "km",
 					codesFlag.Name():   []string{"message 1", "message two"},
 					hexFileFlag.Name(): "bin",
 				}},
-				WantStderr: "Directory values have not been set (`q config set`)\n",
-				WantErr:    fmt.Errorf("Directory values have not been set (`q config set`)"),
+				WantStderr: "failed to execute shell command: version oops\n",
+				WantErr:    fmt.Errorf("failed to execute shell command: version oops"),
 			},
 		},
 		{
@@ -105,6 +122,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "abc123"`,
 						`#define LEEP_CODE_1 "message 1"`,
 						`#define LEEP_CODE_2 "message two"`,
 						"",
@@ -120,11 +138,20 @@ func TestMain(t *testing.T) {
 					"message 1",
 					"message two",
 				},
+				WantRunContents: []*commandtest.RunContents{{
+					Name: "git",
+					Args: []string{"rev-parse", "HEAD"},
+					Dir:  qw().QMKDir,
+				}},
+				RunResponses: []*commandtest.FakeRun{{
+					Stdout: []string{"abc123def456"},
+				}},
 				WantData: &command.Data{Values: map[string]interface{}{
 					keyboardArg.Name(): "kb",
 					keymapArg.Name():   "km",
 					codesFlag.Name():   []string{"message 1", "message two"},
 					hexFileFlag.Name(): "bin",
+					"VERSION":          "abc123def456",
 				}},
 				WantStderr: "failed to write code file: whoops\n",
 				WantErr:    fmt.Errorf("failed to write code file: whoops"),
@@ -139,6 +166,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "abc123"`,
 						`#define LEEP_CODE_1 "message 1"`,
 						`#define LEEP_CODE_2 "message two"`,
 						"",
@@ -149,6 +177,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "auto-generated"`,
 						`#define LEEP_CODE_1 ""`,
 						`#define LEEP_CODE_2 ""`,
 						"",
@@ -163,25 +192,38 @@ func TestMain(t *testing.T) {
 					"message 1",
 					"message two",
 				},
-				RunResponses: []*commandtest.FakeRun{{
-					Stdout: []string{"so"},
-					Stderr: []string{"se"},
-					Err:    fmt.Errorf("oops"),
-				}},
+				RunResponses: []*commandtest.FakeRun{
+					{
+						Stdout: []string{"abc123def456"},
+					},
+					{
+						Stdout: []string{"so"},
+						Stderr: []string{"se"},
+						Err:    fmt.Errorf("oops"),
+					},
+				},
 				WantData: &command.Data{Values: map[string]interface{}{
 					keyboardArg.Name(): "kb",
 					keymapArg.Name():   "km",
 					codesFlag.Name():   []string{"message 1", "message two"},
 					hexFileFlag.Name(): "bin",
+					"VERSION":          "abc123def456",
 				}},
-				WantRunContents: []*commandtest.RunContents{{
-					Name: "qmk",
-					Args: []string{
-						"compile",
-						"--keyboard", "kb",
-						"--keymap", "km",
+				WantRunContents: []*commandtest.RunContents{
+					{
+						Name: "git",
+						Args: []string{"rev-parse", "HEAD"},
+						Dir:  qw().QMKDir,
 					},
-				}},
+					{
+						Name: "qmk",
+						Args: []string{
+							"compile",
+							"--keyboard", "kb",
+							"--keymap", "km",
+						},
+					},
+				},
 				WantStdout: "so\n",
 				WantStderr: strings.Join([]string{
 					"se",
@@ -200,6 +242,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "abc123"`,
 						`#define LEEP_CODE_1 "message 1"`,
 						`#define LEEP_CODE_2 "message two"`,
 						"",
@@ -210,6 +253,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "auto-generated"`,
 						`#define LEEP_CODE_1 ""`,
 						`#define LEEP_CODE_2 ""`,
 						"",
@@ -225,25 +269,38 @@ func TestMain(t *testing.T) {
 					"message 1",
 					"message two",
 				},
-				RunResponses: []*commandtest.FakeRun{{
-					Stdout: []string{"so"},
-					Stderr: []string{"se"},
-					Err:    fmt.Errorf("oops"),
-				}},
+				RunResponses: []*commandtest.FakeRun{
+					{
+						Stdout: []string{"abc123def456"},
+					},
+					{
+						Stdout: []string{"so"},
+						Stderr: []string{"se"},
+						Err:    fmt.Errorf("oops"),
+					},
+				},
 				WantData: &command.Data{Values: map[string]interface{}{
 					keyboardArg.Name(): "kb",
 					keymapArg.Name():   "km",
 					codesFlag.Name():   []string{"message 1", "message two"},
 					hexFileFlag.Name(): "bin",
+					"VERSION":          "abc123def456",
 				}},
-				WantRunContents: []*commandtest.RunContents{{
-					Name: "qmk",
-					Args: []string{
-						"compile",
-						"--keyboard", "kb",
-						"--keymap", "km",
+				WantRunContents: []*commandtest.RunContents{
+					{
+						Name: "git",
+						Args: []string{"rev-parse", "HEAD"},
+						Dir:  qw().QMKDir,
 					},
-				}},
+					{
+						Name: "qmk",
+						Args: []string{
+							"compile",
+							"--keyboard", "kb",
+							"--keymap", "km",
+						},
+					},
+				},
 				WantStdout: "so\n",
 				WantStderr: strings.Join([]string{
 					"se",
@@ -263,6 +320,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "abc123"`,
 						`#define LEEP_CODE_1 "message 1"`,
 						`#define LEEP_CODE_2 "message two"`,
 						"",
@@ -273,6 +331,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "auto-generated"`,
 						`#define LEEP_CODE_1 ""`,
 						`#define LEEP_CODE_2 ""`,
 						"",
@@ -293,24 +352,37 @@ func TestMain(t *testing.T) {
 					"message 1",
 					"message two",
 				},
-				RunResponses: []*commandtest.FakeRun{{
-					Stdout: []string{"so"},
-					Stderr: []string{"se"},
-				}},
+				RunResponses: []*commandtest.FakeRun{
+					{
+						Stdout: []string{"abc123"},
+					},
+					{
+						Stdout: []string{"so"},
+						Stderr: []string{"se"},
+					},
+				},
 				WantData: &command.Data{Values: map[string]interface{}{
 					keyboardArg.Name(): "kb",
 					keymapArg.Name():   "km",
 					codesFlag.Name():   []string{"message 1", "message two"},
 					hexFileFlag.Name(): "bin",
+					"VERSION":          "abc123",
 				}},
-				WantRunContents: []*commandtest.RunContents{{
-					Name: "qmk",
-					Args: []string{
-						"compile",
-						"--keyboard", "kb",
-						"--keymap", "km",
+				WantRunContents: []*commandtest.RunContents{
+					{
+						Name: "git",
+						Args: []string{"rev-parse", "HEAD"},
+						Dir:  qw().QMKDir,
 					},
-				}},
+					{
+						Name: "qmk",
+						Args: []string{
+							"compile",
+							"--keyboard", "kb",
+							"--keymap", "km",
+						},
+					},
+				},
 				WantStdout: "so\n",
 				WantStderr: strings.Join([]string{
 					"se",
@@ -329,6 +401,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "abc12"`,
 						`#define LEEP_CODE_1 "message 1"`,
 						`#define LEEP_CODE_2 "message two"`,
 						"",
@@ -345,6 +418,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "auto-generated"`,
 						`#define LEEP_CODE_1 ""`,
 						`#define LEEP_CODE_2 ""`,
 						"",
@@ -364,24 +438,37 @@ func TestMain(t *testing.T) {
 					"message 1",
 					"message two",
 				},
-				RunResponses: []*commandtest.FakeRun{{
-					Stdout: []string{"so"},
-					Stderr: []string{"se"},
-				}},
+				RunResponses: []*commandtest.FakeRun{
+					{
+						Stdout: []string{"abc12"},
+					},
+					{
+						Stdout: []string{"so"},
+						Stderr: []string{"se"},
+					},
+				},
 				WantData: &command.Data{Values: map[string]interface{}{
 					keyboardArg.Name(): "kb",
 					keymapArg.Name():   "km",
 					codesFlag.Name():   []string{"message 1", "message two"},
 					hexFileFlag.Name(): "bin",
+					"VERSION":          "abc12",
 				}},
-				WantRunContents: []*commandtest.RunContents{{
-					Name: "qmk",
-					Args: []string{
-						"compile",
-						"--keyboard", "kb",
-						"--keymap", "km",
+				WantRunContents: []*commandtest.RunContents{
+					{
+						Name: "git",
+						Args: []string{"rev-parse", "HEAD"},
+						Dir:  qw().QMKDir,
 					},
-				}},
+					{
+						Name: "qmk",
+						Args: []string{
+							"compile",
+							"--keyboard", "kb",
+							"--keymap", "km",
+						},
+					},
+				},
 				WantStdout: "so\n",
 				WantStderr: strings.Join([]string{
 					"se",
@@ -400,6 +487,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "abc123"`,
 						`#define LEEP_CODE_1 "message 1"`,
 						`#define LEEP_CODE_2 "message two"`,
 						"",
@@ -415,6 +503,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "auto-generated"`,
 						`#define LEEP_CODE_1 ""`,
 						`#define LEEP_CODE_2 ""`,
 						"",
@@ -434,24 +523,37 @@ func TestMain(t *testing.T) {
 					"message 1",
 					"message two",
 				},
-				RunResponses: []*commandtest.FakeRun{{
-					Stdout: []string{"so"},
-					Stderr: []string{"se"},
-				}},
+				RunResponses: []*commandtest.FakeRun{
+					{
+						Stdout: []string{"abc123def456"},
+					},
+					{
+						Stdout: []string{"so"},
+						Stderr: []string{"se"},
+					},
+				},
 				WantData: &command.Data{Values: map[string]interface{}{
 					keyboardArg.Name(): "kb",
 					keymapArg.Name():   "km",
 					codesFlag.Name():   []string{"message 1", "message two"},
 					hexFileFlag.Name(): "bin",
+					"VERSION":          "abc123def456",
 				}},
-				WantRunContents: []*commandtest.RunContents{{
-					Name: "qmk",
-					Args: []string{
-						"compile",
-						"--keyboard", "kb",
-						"--keymap", "km",
+				WantRunContents: []*commandtest.RunContents{
+					{
+						Name: "git",
+						Args: []string{"rev-parse", "HEAD"},
+						Dir:  qw().QMKDir,
 					},
-				}},
+					{
+						Name: "qmk",
+						Args: []string{
+							"compile",
+							"--keyboard", "kb",
+							"--keymap", "km",
+						},
+					},
+				},
 				WantStdout: "so\n",
 				WantStderr: "se\n",
 			},
@@ -465,6 +567,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "abc123"`,
 						`#define LEEP_CODE_1 "message 1"`,
 						`#define LEEP_CODE_2 "message two"`,
 						"",
@@ -480,6 +583,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "auto-generated"`,
 						`#define LEEP_CODE_1 ""`,
 						`#define LEEP_CODE_2 ""`,
 						"",
@@ -500,24 +604,37 @@ func TestMain(t *testing.T) {
 					"message two",
 					"-x",
 				},
-				RunResponses: []*commandtest.FakeRun{{
-					Stdout: []string{"so"},
-					Stderr: []string{"se"},
-				}},
+				RunResponses: []*commandtest.FakeRun{
+					{
+						Stdout: []string{"abc123def456"},
+					},
+					{
+						Stdout: []string{"so"},
+						Stderr: []string{"se"},
+					},
+				},
 				WantData: &command.Data{Values: map[string]interface{}{
 					keyboardArg.Name(): "kb/sub\\thing",
 					keymapArg.Name():   "km\\more/path",
 					codesFlag.Name():   []string{"message 1", "message two"},
 					hexFileFlag.Name(): "hex",
+					"VERSION":          "abc123def456",
 				}},
-				WantRunContents: []*commandtest.RunContents{{
-					Name: "qmk",
-					Args: []string{
-						"compile",
-						"--keyboard", "kb/sub\\thing",
-						"--keymap", "km\\more/path",
+				WantRunContents: []*commandtest.RunContents{
+					{
+						Name: "git",
+						Args: []string{"rev-parse", "HEAD"},
+						Dir:  qw().QMKDir,
 					},
-				}},
+					{
+						Name: "qmk",
+						Args: []string{
+							"compile",
+							"--keyboard", "kb/sub\\thing",
+							"--keymap", "km\\more/path",
+						},
+					},
+				},
 				WantStdout: "so\n",
 				WantStderr: "se\n",
 			},
@@ -531,6 +648,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "abc"`,
 						`#define LEEP_CODE_1 "abcd"`,
 						`#define LEEP_CODE_2 "1234"`,
 						"",
@@ -546,6 +664,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "auto-generated"`,
 						`#define LEEP_CODE_1 ""`,
 						`#define LEEP_CODE_2 ""`,
 						"",
@@ -566,25 +685,38 @@ func TestMain(t *testing.T) {
 					"~",
 					"--hash",
 				},
-				RunResponses: []*commandtest.FakeRun{{
-					Stdout: []string{"so"},
-					Stderr: []string{"se"},
-				}},
+				RunResponses: []*commandtest.FakeRun{
+					{
+						Stdout: []string{"abc"},
+					},
+					{
+						Stdout: []string{"so"},
+						Stderr: []string{"se"},
+					},
+				},
 				WantData: &command.Data{Values: map[string]interface{}{
 					keyboardArg.Name(): "kb",
 					keymapArg.Name():   "km",
 					codesFlag.Name():   []string{"~~~~", "~"},
 					hashFlag.Name():    true,
 					hexFileFlag.Name(): "bin",
+					"VERSION":          "abc",
 				}},
-				WantRunContents: []*commandtest.RunContents{{
-					Name: "qmk",
-					Args: []string{
-						"compile",
-						"--keyboard", "kb",
-						"--keymap", "km",
+				WantRunContents: []*commandtest.RunContents{
+					{
+						Name: "git",
+						Args: []string{"rev-parse", "HEAD"},
+						Dir:  qw().QMKDir,
 					},
-				}},
+					{
+						Name: "qmk",
+						Args: []string{
+							"compile",
+							"--keyboard", "kb",
+							"--keymap", "km",
+						},
+					},
+				},
 				WantStdout: "so\n",
 				WantStderr: "se\n",
 			},
@@ -598,6 +730,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "abc123"`,
 						//                    abcd (offsets, 1, 2, 3, 1)
 						`#define LEEP_CODE_1 "bdfe"`,
 						//                    1234 (offsets, 1, 1, 1, 1)
@@ -615,6 +748,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "auto-generated"`,
 						`#define LEEP_CODE_1 ""`,
 						`#define LEEP_CODE_2 ""`,
 						"",
@@ -635,25 +769,121 @@ func TestMain(t *testing.T) {
 					fmt.Sprintf("%c%c%c%c%c", minRune+1, minRune+1, minRune+1, minRune+1, minRune+1),
 					"--hash",
 				},
-				RunResponses: []*commandtest.FakeRun{{
-					Stdout: []string{"so"},
-					Stderr: []string{"se"},
-				}},
+				RunResponses: []*commandtest.FakeRun{
+					{
+						Stdout: []string{"abc123"},
+					},
+					{
+						Stdout: []string{"so"},
+						Stderr: []string{"se"},
+					},
+				},
 				WantData: &command.Data{Values: map[string]interface{}{
 					keyboardArg.Name(): "kb",
 					keymapArg.Name():   "km",
 					codesFlag.Name():   []string{`!"#`, "!!!!!"},
 					hashFlag.Name():    true,
 					hexFileFlag.Name(): "bin",
+					"VERSION":          "abc123",
 				}},
-				WantRunContents: []*commandtest.RunContents{{
-					Name: "qmk",
-					Args: []string{
-						"compile",
-						"--keyboard", "kb",
-						"--keymap", "km",
+				WantRunContents: []*commandtest.RunContents{
+					{
+						Name: "git",
+						Args: []string{"rev-parse", "HEAD"},
+						Dir:  qw().QMKDir,
 					},
+					{
+						Name: "qmk",
+						Args: []string{
+							"compile",
+							"--keyboard", "kb",
+							"--keymap", "km",
+						},
+					},
+				},
+				WantStdout: "so\n",
+				WantStderr: "se\n",
+			},
+		},
+		{
+			name: "succeeds with rot and empty code",
+			q:    qwHash("abcd", "1234"),
+			writeFileResponses: []*writeFileResponse{
+				// Write codes to file
+				{
+					expectedFile: filepath.Join(qw().QMKDir, codeFile),
+					expectedData: strings.Join([]string{
+						"#pragma once",
+						`#define LEEP_VERSION "abc123"`,
+						`#define LEEP_CODE_1 ""`,
+						//                    1234 (offsets, 1, 1, 1, 1)
+						`#define LEEP_CODE_2 "2345"`,
+						"",
+					}, "\n"),
+				},
+				// Copy write
+				{
+					expectedFile: filepath.Join(qw().OutputDir, "kb_km.bin"),
+					expectedData: "abcd",
+				},
+				// Write empty strings to file
+				{
+					expectedFile: filepath.Join(qw().QMKDir, codeFile),
+					expectedData: strings.Join([]string{
+						"#pragma once",
+						`#define LEEP_VERSION "auto-generated"`,
+						`#define LEEP_CODE_1 ""`,
+						`#define LEEP_CODE_2 ""`,
+						"",
+					}, "\n"),
+				},
+			},
+			readFileResponses: []*readFileResponse{{
+				// Copy file read
+				expectedFile: filepath.Join(qw().QMKDir, "kb_km.bin"),
+				contents:     "abcd",
+			}},
+			etc: &commandtest.ExecuteTestCase{
+				Args: []string{
+					"kb",
+					"km",
+					"--codes",
+					"",
+					fmt.Sprintf("%c%c%c%c%c", minRune+1, minRune+1, minRune+1, minRune+1, minRune+1),
+					"--hash",
+				},
+				RunResponses: []*commandtest.FakeRun{
+					{
+						Stdout: []string{"abc123"},
+					},
+					{
+						Stdout: []string{"so"},
+						Stderr: []string{"se"},
+					},
+				},
+				WantData: &command.Data{Values: map[string]interface{}{
+					keyboardArg.Name(): "kb",
+					keymapArg.Name():   "km",
+					codesFlag.Name():   []string{``, "!!!!!"},
+					hashFlag.Name():    true,
+					hexFileFlag.Name(): "bin",
+					"VERSION":          "abc123",
 				}},
+				WantRunContents: []*commandtest.RunContents{
+					{
+						Name: "git",
+						Args: []string{"rev-parse", "HEAD"},
+						Dir:  qw().QMKDir,
+					},
+					{
+						Name: "qmk",
+						Args: []string{
+							"compile",
+							"--keyboard", "kb",
+							"--keymap", "km",
+						},
+					},
+				},
 				WantStdout: "so\n",
 				WantStderr: "se\n",
 			},
@@ -667,6 +897,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "abc123"`,
 						`#define LEEP_CODE_1 "message 1"`,
 						`#define LEEP_CODE_2 "message two"`,
 						"",
@@ -682,6 +913,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
+						`#define LEEP_VERSION "auto-generated"`,
 						`#define LEEP_CODE_1 ""`,
 						`#define LEEP_CODE_2 ""`,
 						"",
@@ -702,24 +934,37 @@ func TestMain(t *testing.T) {
 					"message 1",
 					"message two",
 				},
-				RunResponses: []*commandtest.FakeRun{{
-					Stdout: []string{"so"},
-					Stderr: []string{"se"},
-				}},
+				RunResponses: []*commandtest.FakeRun{
+					{
+						Stdout: []string{"abc123def456"},
+					},
+					{
+						Stdout: []string{"so"},
+						Stderr: []string{"se"},
+					},
+				},
 				WantData: &command.Data{Values: map[string]interface{}{
 					keyboardArg.Name(): "kb",
 					keymapArg.Name():   "km",
 					codesFlag.Name():   []string{"message 1", "message two"},
 					hexFileFlag.Name(): "bin",
+					"VERSION":          "abc123def456",
 				}},
-				WantRunContents: []*commandtest.RunContents{{
-					Name: "qmk",
-					Args: []string{
-						"compile",
-						"--keyboard", "kb",
-						"--keymap", "km",
+				WantRunContents: []*commandtest.RunContents{
+					{
+						Name: "git",
+						Args: []string{"rev-parse", "HEAD"},
+						Dir:  qw().QMKDir,
 					},
-				}},
+					{
+						Name: "qmk",
+						Args: []string{
+							"compile",
+							"--keyboard", "kb",
+							"--keymap", "km",
+						},
+					},
+				},
 				WantStdout: "so\n",
 				WantStderr: strings.Join([]string{
 					"se",
@@ -736,33 +981,70 @@ func TestMain(t *testing.T) {
 				expectedFile: filepath.Join(qw().QMKDir, "kb_km.bin"),
 				contents:     "abcd",
 			}},
-			writeFileResponses: []*writeFileResponse{{
+			writeFileResponses: []*writeFileResponse{
+				// Write codes to file
+				{
+					expectedFile: filepath.Join(qw().QMKDir, codeFile),
+					expectedData: strings.Join([]string{
+						"#pragma once",
+						`#define LEEP_VERSION "abc123"`,
+						`#define LEEP_CODE_1 ""`,
+						`#define LEEP_CODE_2 ""`,
+						"",
+					}, "\n"),
+				},
 				// Copy write
-				expectedFile: filepath.Join(qw().OutputDir, "kb_km.bin"),
-				expectedData: "abcd",
-			}},
+				{
+					expectedFile: filepath.Join(qw().OutputDir, "kb_km.bin"),
+					expectedData: "abcd",
+				},
+				// Write empty strings to file
+				{
+					expectedFile: filepath.Join(qw().QMKDir, codeFile),
+					expectedData: strings.Join([]string{
+						"#pragma once",
+						`#define LEEP_VERSION "auto-generated"`,
+						`#define LEEP_CODE_1 ""`,
+						`#define LEEP_CODE_2 ""`,
+						"",
+					}, "\n"),
+				},
+			},
 			etc: &commandtest.ExecuteTestCase{
 				Args: []string{
 					"kb",
 					"km",
 				},
-				RunResponses: []*commandtest.FakeRun{{
-					Stdout: []string{"so"},
-					Stderr: []string{"se"},
-				}},
+				RunResponses: []*commandtest.FakeRun{
+					{
+						Stdout: []string{"abc123def456"},
+					},
+					{
+						Stdout: []string{"so"},
+						Stderr: []string{"se"},
+					},
+				},
 				WantData: &command.Data{Values: map[string]interface{}{
 					keyboardArg.Name(): "kb",
 					keymapArg.Name():   "km",
 					hexFileFlag.Name(): "bin",
+					"VERSION":          "abc123def456",
 				}},
-				WantRunContents: []*commandtest.RunContents{{
-					Name: "qmk",
-					Args: []string{
-						"compile",
-						"--keyboard", "kb",
-						"--keymap", "km",
+				WantRunContents: []*commandtest.RunContents{
+					{
+						Name: "git",
+						Args: []string{"rev-parse", "HEAD"},
+						Dir:  qw().QMKDir,
 					},
-				}},
+					{
+						Name: "qmk",
+						Args: []string{
+							"compile",
+							"--keyboard", "kb",
+							"--keymap", "km",
+						},
+					},
+				},
 				WantStdout: "so\n",
 				WantStderr: "se\n",
 			},
@@ -810,12 +1092,25 @@ func TestMain(t *testing.T) {
 			},
 			etc: &commandtest.ExecuteTestCase{
 				Args: []string{"shortcuts", "add", "p", "kb/subkb", "km", "--codes", "shortcut-message-1", "msg2"},
+				RunResponses: []*commandtest.FakeRun{
+					{
+						Stdout: []string{"abc123def456"},
+					},
+				},
+				WantRunContents: []*commandtest.RunContents{
+					{
+						Name: "git",
+						Args: []string{"rev-parse", "HEAD"},
+						Dir:  qw().QMKDir,
+					},
+				},
 				WantData: &command.Data{Values: map[string]interface{}{
 					keyboardArg.Name():           "kb/subkb",
 					keymapArg.Name():             "km",
 					codesFlag.Name():             []string{"shortcut-message-1", "msg2"},
 					commander.ShortcutArg.Name(): "p",
 					hexFileFlag.Name():           "bin",
+					"VERSION":                    "abc123def456",
 				}},
 			},
 		},
@@ -870,6 +1165,9 @@ func TestMetadata(t *testing.T) {
 	if diff := cmp.Diff([]string(nil), qw.Setup()); diff != "" {
 		t.Errorf("qmkWrapper.Setup() returned wrong value (-want, +got):\n%s", diff)
 	}
+
+	// CLI() doesn't error
+	CLI("abc", "")
 }
 
 func TestRot(t *testing.T) {
