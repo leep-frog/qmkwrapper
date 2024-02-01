@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -122,7 +123,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
-						`#define LEEP_VERSION "abc123"`,
+						`#define LEEP_VERSION "2001-02-03 04:05:06 abc123"`,
 						`#define LEEP_CODE_1 "message 1"`,
 						`#define LEEP_CODE_2 "message two"`,
 						"",
@@ -166,7 +167,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
-						`#define LEEP_VERSION "abc123"`,
+						`#define LEEP_VERSION "2001-02-03 04:05:06 abc123"`,
 						`#define LEEP_CODE_1 "message 1"`,
 						`#define LEEP_CODE_2 "message two"`,
 						"",
@@ -242,7 +243,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
-						`#define LEEP_VERSION "abc123"`,
+						`#define LEEP_VERSION "2001-02-03 04:05:06 abc123"`,
 						`#define LEEP_CODE_1 "message 1"`,
 						`#define LEEP_CODE_2 "message two"`,
 						"",
@@ -320,7 +321,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
-						`#define LEEP_VERSION "abc123"`,
+						`#define LEEP_VERSION "2001-02-03 04:05:06 abc123"`,
 						`#define LEEP_CODE_1 "message 1"`,
 						`#define LEEP_CODE_2 "message two"`,
 						"",
@@ -401,7 +402,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
-						`#define LEEP_VERSION "abc12"`,
+						`#define LEEP_VERSION "2001-02-03 04:05:06 abc12"`,
 						`#define LEEP_CODE_1 "message 1"`,
 						`#define LEEP_CODE_2 "message two"`,
 						"",
@@ -487,7 +488,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
-						`#define LEEP_VERSION "abc123"`,
+						`#define LEEP_VERSION "2001-02-03 04:05:06 abc123"`,
 						`#define LEEP_CODE_1 "message 1"`,
 						`#define LEEP_CODE_2 "message two"`,
 						"",
@@ -567,7 +568,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
-						`#define LEEP_VERSION "abc123"`,
+						`#define LEEP_VERSION "2001-02-03 04:05:06 abc123"`,
 						`#define LEEP_CODE_1 "message 1"`,
 						`#define LEEP_CODE_2 "message two"`,
 						"",
@@ -648,7 +649,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
-						`#define LEEP_VERSION "abc"`,
+						`#define LEEP_VERSION "2001-02-03 04:05:06 abc"`,
 						`#define LEEP_CODE_1 "abcd"`,
 						`#define LEEP_CODE_2 "1234"`,
 						"",
@@ -730,7 +731,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
-						`#define LEEP_VERSION "abc123"`,
+						`#define LEEP_VERSION "2001-02-03 04:05:06 abc123"`,
 						//                    abcd (offsets, 1, 2, 3, 1)
 						`#define LEEP_CODE_1 "bdfe"`,
 						//                    1234 (offsets, 1, 1, 1, 1)
@@ -814,7 +815,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
-						`#define LEEP_VERSION "abc123"`,
+						`#define LEEP_VERSION "2001-02-03 04:05:06 abc123"`,
 						`#define LEEP_CODE_1 ""`,
 						//                    1234 (offsets, 1, 1, 1, 1)
 						`#define LEEP_CODE_2 "2345"`,
@@ -897,7 +898,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
-						`#define LEEP_VERSION "abc123"`,
+						`#define LEEP_VERSION "2001-02-03 04:05:06 abc123"`,
 						`#define LEEP_CODE_1 "message 1"`,
 						`#define LEEP_CODE_2 "message two"`,
 						"",
@@ -987,7 +988,7 @@ func TestMain(t *testing.T) {
 					expectedFile: filepath.Join(qw().QMKDir, codeFile),
 					expectedData: strings.Join([]string{
 						"#pragma once",
-						`#define LEEP_VERSION "abc123"`,
+						`#define LEEP_VERSION "2001-02-03 04:05:06 abc123"`,
 						`#define LEEP_CODE_1 ""`,
 						`#define LEEP_CODE_2 ""`,
 						"",
@@ -1117,6 +1118,9 @@ func TestMain(t *testing.T) {
 		/* Useful for commenting out tests. */
 	} {
 		t.Run(test.name, func(t *testing.T) {
+			commandtest.StubValue(t, &timeNow, func() time.Time {
+				return time.Date(2001, 2, 3, 4, 5, 6, 7, time.UTC)
+			})
 			test.etc.Node = test.q.Node()
 
 			commandtest.StubValue(t, &osReadFile, func(s string) ([]byte, error) {

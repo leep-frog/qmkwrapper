@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/leep-frog/command/command"
 	"github.com/leep-frog/command/commander"
@@ -15,6 +16,11 @@ import (
 const (
 	// TODO: Use this to replace old qmk CLI.
 	QMKEnvArg = "LEEP_QMK"
+)
+
+var (
+	// Var so can stub out in tests
+	timeNow = time.Now
 )
 
 var (
@@ -202,7 +208,8 @@ func (qw *qmkWrapper) Node() command.Node {
 					code2 = rot(qw.hash2, code2, true)
 				}
 
-				if err := osWriteFile(filepath.Join(qw.QMKDir, codeFile), []byte(codeFileContents(version, code1, code2)), 0644); err != nil {
+				timedVersion := timeNow().Format("2006-01-02 15:04:05 ") + version
+				if err := osWriteFile(filepath.Join(qw.QMKDir, codeFile), []byte(codeFileContents(timedVersion, code1, code2)), 0644); err != nil {
 					return o.Annotate(err, "failed to write code file")
 				}
 
