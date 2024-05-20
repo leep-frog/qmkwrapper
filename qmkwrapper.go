@@ -49,10 +49,10 @@ func CLI(code1, code2 string) sourcerer.CLI {
 
 func Aliasers() sourcerer.Option {
 	return sourcerer.Aliasers(map[string][]string{
-		"qm":  {"q", "m"},
-		"qk":  {"q", "k"},
-		"qp":  {"q", "p"},
-		"qgr": {"q", "gr"},
+		"qm": {"q", "m"},
+		"qk": {"q", "k"},
+		"qp": {"q", "p"},
+		"qg": {"q", "gr"},
 	})
 }
 
